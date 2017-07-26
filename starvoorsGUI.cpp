@@ -10,7 +10,11 @@ StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->console->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    ui->source->setFocus();
+    //avoids changing the size of the app, e.g. no maximize
     setFixedSize(width(), height());
+    //Centers main window
+    this->move(QApplication::desktop()->availableGeometry().center() - this->rect().center());
 }
 
 StarvoorsGUI::~StarvoorsGUI()
@@ -21,21 +25,21 @@ StarvoorsGUI::~StarvoorsGUI()
 void StarvoorsGUI::on_toolButton_clicked()
 {
     QString path;
-    path = browseDir("Choose directory");
+    path = browseDir(tr("Choose directory"));
     ui->source->setText( path );
 }
 
 void StarvoorsGUI::on_toolButton_2_clicked()
 {
     QString path;
-    path = browseFile("Choose file");
+    path = browseFile(tr("Choose file"));
     ui->ppdate->setText( path );
 }
 
 void StarvoorsGUI::on_toolButton_3_clicked()
 {
     QString path;
-    path = browseDir("Choose directory");
+    path = browseDir(tr("Choose directory"));
     ui->output->setText( path );
 }
 
@@ -56,7 +60,9 @@ QString StarvoorsGUI::browseFile(QString s)
 
 void StarvoorsGUI::on_button_run_clicked()
 {
-    if (!checkArguments()) {return;}
+    if (!checkArguments()) { return; }
+    if (!(ui->console->toPlainText() == ""))
+        ui->console->clear();
 
     ui->tabWidget->setCurrentIndex(2);
     QString currentDir = QDir::currentPath();
@@ -66,14 +72,16 @@ void StarvoorsGUI::on_button_run_clicked()
     QStringList arguments;
 
     QProcess *myProcess = new QProcess(this);
-    myProcess->start(program,arguments);
+    myProcess->start(program, makeStarvoorsCall(arguments));
     myProcess->waitForFinished();
     QString result_all = myProcess->readAllStandardOutput();
     ui->console->setText(result_all);
 }
 
-QString StarvoorsGUI::makeStarvoorsCall(QString address){
-  return address + " ";
+QStringList StarvoorsGUI::makeStarvoorsCall(QStringList args){
+  return args << ui->source->toPlainText()
+              << ui->ppdate->toPlainText()
+              << ui->output->toPlainText();
 }
 
 bool StarvoorsGUI::checkArguments(){
@@ -81,7 +89,7 @@ bool StarvoorsGUI::checkArguments(){
     switch (ui->only_parse->isChecked()) {
     case true:
         if (ui->ppdate->toPlainText() == "") {
-            QMessageBox::warning(this, tr("StaRVOOrS"),
+            QMessageBox::warning(this, tr("Error"),
                                 exitMessage(10),
                                 QMessageBox::Ok,
                                 QMessageBox::Ok);
@@ -99,7 +107,7 @@ bool StarvoorsGUI::checkArguments(){
             return true;
             break;
         default:
-            QMessageBox::warning(this, tr("StaRVOOrS"),
+            QMessageBox::warning(this, tr("Error"),
                                 exitMessage(res),
                                 QMessageBox::Ok,
                                 QMessageBox::Ok);
@@ -113,33 +121,33 @@ bool StarvoorsGUI::checkArguments(){
 QString StarvoorsGUI::exitMessage(int n){
     switch (n) {
     case 1:
-        return "Missing source code address.\n";
+        return tr("Missing source code address.\n");
         break;
     case 10:
-        return "Missing ppDATE specification file.\n";
+        return tr("Missing ppDATE specification file.\n");
         break;
     case 11:
           return "Missing source code address.\n"
                  "Missing ppDATE specification file.\n";
         break;
     case 101:
-        return "Missing source code address.\n"
-               "Missing output address.\n" ;
+        return tr("Missing source code address.\n")
+                + tr("Missing output address.\n");
         break;
     case 110:
-        return "Missing ppDATE specification file.\n"
-               "Missing output address.\n" ;
+        return tr("Missing ppDATE specification file.\n")
+               + tr("Missing output address.\n");
         break;
     case 100:
-        return "Missing output address.\n";
+        return tr("Missing output address.\n");
         break;
     case 111:
-        return "Missing source code address.\n"
-               "Missing ppDATE specification file.\n"
-               "Missing output address.\n";
+        return tr("Missing source code address.\n")
+               + tr("Missing ppDATE specification file.\n")
+               + tr("Missing output address.\n");
         break;
     default:
-        return "Missing information.\n";
+        return tr("Missing information.\n");
         break;
     }
 }
@@ -153,4 +161,9 @@ int StarvoorsGUI::argumentsEmpty(){
     if (ui->output->toPlainText() == "")
         res = res + 100;
     return res;
+}
+
+void StarvoorsGUI::on_pushButton_2_clicked()
+{
+    ui->source->clear();
 }

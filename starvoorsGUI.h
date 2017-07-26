@@ -27,9 +27,11 @@ private slots:
 
     void on_button_run_clicked();
 
+    void on_pushButton_2_clicked();
+
 private:
     Ui::StarvoorsGUI *ui;
-    QString makeStarvoorsCall(QString address);
+    QStringList makeStarvoorsCall(QStringList address);
     bool checkArguments();
     QString exitMessage(int n);
     int argumentsEmpty();
