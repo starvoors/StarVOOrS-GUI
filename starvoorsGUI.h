@@ -2,6 +2,7 @@
 #define STARVOORSGUI_H
 
 #include <QWidget>
+#include <QProcess>
 
 namespace Ui {
 class StarvoorsGUI;
@@ -14,10 +15,13 @@ class StarvoorsGUI : public QWidget
 public:
     explicit StarvoorsGUI(QWidget *parent = 0);
     ~StarvoorsGUI();
+    QProcess *process;
 
 private slots:
     QString browseDir(QString s);
     QString browseFile(QString s);
+    void readFromConsole();
+    void disableComponents(int exit,QProcess::ExitStatus status);
 
     void on_toolButton_clicked();
 

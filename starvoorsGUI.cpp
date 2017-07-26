@@ -11,10 +11,15 @@ StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
     ui->setupUi(this);
     ui->console->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
     ui->source->setFocus();
+    ui->pushButton_2->setEnabled(false);
     //avoids changing the size of the app, e.g. no maximize
     setFixedSize(width(), height());
     //Centers main window
     this->move(QApplication::desktop()->availableGeometry().center() - this->rect().center());
+    //TODO: remove what follows after implementation is completed
+    ui->source->setText("/home/chimento/Example/Login");
+    ui->ppdate->setText("/home/chimento/Example/prop_deposit.ppd");
+    ui->output->setText("/home/chimento/Example");
 }
 
 StarvoorsGUI::~StarvoorsGUI()
@@ -64,18 +69,19 @@ void StarvoorsGUI::on_button_run_clicked()
     if (!(ui->console->toPlainText() == ""))
         ui->console->clear();
 
+    ui->pushButton_2->setEnabled(true);
+    ui->button_run->setEnabled(false);
     ui->tabWidget->setCurrentIndex(2);
     QString currentDir = QDir::currentPath();
-
-    QString program = "/home/chimento/tool StaRVOOrS/StaRVOOrS";
-
+    QString starvoors = currentDir + tr("/StaRVOOrS");
     QStringList arguments;
 
-    QProcess *myProcess = new QProcess(this);
-    myProcess->start(program, makeStarvoorsCall(arguments));
-    myProcess->waitForFinished();
-    QString result_all = myProcess->readAllStandardOutput();
-    ui->console->setText(result_all);
+    process = new QProcess(this);
+
+    connect(process,SIGNAL(readyReadStandardOutput()),this,SLOT(readFromConsole()));
+    connect(process,SIGNAL(finished(int,QProcess::ExitStatus)),this,SLOT(disableComponents(int,QProcess::ExitStatus)));
+
+    process->start(starvoors, makeStarvoorsCall(arguments));
 }
 
 QStringList StarvoorsGUI::makeStarvoorsCall(QStringList args){
@@ -163,7 +169,23 @@ int StarvoorsGUI::argumentsEmpty(){
     return res;
 }
 
+void StarvoorsGUI::readFromConsole()
+{
+    QByteArray arr = process->readAllStandardOutput();
+    ui->console->append(arr.simplified());
+}
+
 void StarvoorsGUI::on_pushButton_2_clicked()
 {
-    ui->source->clear();
+    process->kill();
+    ui->pushButton_2->setEnabled(false);
+    ui->button_run->setEnabled(true);
+}
+
+void StarvoorsGUI::disableComponents(int exit,QProcess::ExitStatus status)
+{
+    if (exit == 0 && status == QProcess::NormalExit){
+        ui->pushButton_2->setEnabled(false);
+        ui->button_run->setEnabled(true);
+    }
 }
