@@ -12,14 +12,28 @@ StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
     ui->console->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
     ui->source->setFocus();
     ui->pushButton_2->setEnabled(false);
+    starvoorsExec = StarvoorsExec::NoneExec;
+
+    //setting up a menu bar
+    QVBoxLayout *boxLayout = new QVBoxLayout(this); // Main layout of widget
+    QMenuBar* menuBar = new QMenuBar();
+    QMenu *fileMenu = new QMenu("File");
+
+    QAction* exitAction = new QAction(tr("Exit"), this);
+    exitAction->setStatusTip(tr("Exit the application"));
+    connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
+
+    fileMenu->addAction(exitAction);
+    menuBar->addMenu(fileMenu);
+
+    this->setLayout(boxLayout);
+    boxLayout->setMenuBar(menuBar);
+
     //avoids changing the size of the app, e.g. no maximize
     setFixedSize(width(), height());
+
     //Centers main window
     this->move(QApplication::desktop()->availableGeometry().center() - this->rect().center());
-    //TODO: remove what follows after implementation is completed
-    ui->source->setText("/home/chimento/Example/Login");
-    ui->ppdate->setText("/home/chimento/Example/prop_deposit.ppd");
-    ui->output->setText("/home/chimento/Example");
 }
 
 StarvoorsGUI::~StarvoorsGUI()
@@ -79,15 +93,28 @@ void StarvoorsGUI::on_button_run_clicked()
     process = new QProcess(this);
 
     connect(process,SIGNAL(readyReadStandardOutput()),this,SLOT(readFromConsole()));
-    connect(process,SIGNAL(finished(int,QProcess::ExitStatus)),this,SLOT(disableComponents(int,QProcess::ExitStatus)));
+    connect(process,SIGNAL(finished(int,QProcess::ExitStatus)),this,SLOT(resetComponents(int,QProcess::ExitStatus)));
 
     process->start(starvoors, makeStarvoorsCall(arguments));
 }
 
 QStringList StarvoorsGUI::makeStarvoorsCall(QStringList args){
-  return args << ui->source->toPlainText()
-              << ui->ppdate->toPlainText()
-              << ui->output->toPlainText();
+
+    QStringList flags ;
+
+    if (ui->only_parse->isChecked())
+        return args << tr("-p") << ui->ppdate->toPlainText();
+    if (ui->only_rv->isChecked())
+        flags << tr("-r");
+    if (ui->none_verbose->isChecked())
+        flags << tr("-n");
+    if (ui->xml->isChecked())
+        flags << tr("-x");
+
+    return args << ui->source->toPlainText()
+                << flags
+                << ui->ppdate->toPlainText()
+                << ui->output->toPlainText();
 }
 
 bool StarvoorsGUI::checkArguments(){
@@ -140,12 +167,12 @@ QString StarvoorsGUI::exitMessage(int n){
         return tr("Missing source code address.\n")
                 + tr("Missing output address.\n");
         break;
+    case 100:
+        return tr("Missing output address.\n");
+        break;
     case 110:
         return tr("Missing ppDATE specification file.\n")
                + tr("Missing output address.\n");
-        break;
-    case 100:
-        return tr("Missing output address.\n");
         break;
     case 111:
         return tr("Missing source code address.\n")
@@ -169,23 +196,167 @@ int StarvoorsGUI::argumentsEmpty(){
     return res;
 }
 
+
 void StarvoorsGUI::readFromConsole()
 {
-    QByteArray arr = process->readAllStandardOutput();
-    ui->console->append(arr.simplified());
+    QByteArray arr = process->readAllStandardOutput();    
+    QByteArray line = arr.simplified();
+
+    if (line == "")
+        return;
+
+    switch (starvoorsExec) {
+    case StarvoorsExec::NoneExec:
+        if (line.contains("Setting the taclet")) {
+            ui->console->append(tr("Initiating static verification of Hoare triples with KeY."));
+            ui->console->append(line);
+            starvoorsExec = StarvoorsExec::KeyExec;
+            return;
+        }
+        if (line.contains("DATE Compiled Successfully")) {
+            starvoorsExec = StarvoorsExec::FinishedExec;
+            if (ui->only_rv->isChecked()) {
+                ui->console->append("StaRVOOrS is ran in only runtime verification mode.");
+            }
+            else {
+                ui->console->append("There are no Hoare triples to analyse.");
+            }
+            ui->console->append("Initiating monitor files generation.");
+            return;
+        }
+        if (line.contains("compiler.ParseException")){
+            starvoorsExec = StarvoorsExec::LarvaExecErr;
+            if (ui->only_rv->isChecked()) {
+                ui->console->append("StaRVOOrS is ran in only runtime verification mode.");
+            }
+            else {
+                ui->console->append("There are no Hoare triples to analyse.");
+            }
+            ui->console->append("Initiating monitor files generation.");
+            ui->console->append("Translating ppDATE to DATE.");
+            ui->console->append("Translation completed.");
+            ui->console->append("Running LARVA...");
+            ui->console->append(line);
+            return;
+        }
+        if (line.contains("Welcome to StaRVOOrS")) {
+           ui->console->append(arr.remove(0,21));
+           starvoorsExec = StarvoorsExec::OnlyParsing;
+        }
+        break;
+    case StarvoorsExec::KeyExec:
+        if (line.contains("Analysing the Hoare triple")) {
+            ui->console->append(line + "\n");
+            return;
+        }
+        if (line.contains("Static verification completed.")) {
+            ui->console->append(tr("Static verification completed. See the generated report file for more details.\n"));
+            ui->console->append(tr("Generating Java files to control the Hoare triple(s)."));
+            starvoorsExec = StarvoorsExec::LarvaExec;
+            return;
+        }
+        if (line.contains("An error has occurred")) {
+            ui->console->append(line + "\n");
+            starvoorsExec = StarvoorsExec::KeyExecErr;
+            return;
+        }
+        if (line == "Done.") {
+            ui->console->append(line + "\n");
+            return;
+        }
+        ui->console->append(line);
+        break;
+    case StarvoorsExec::KeyExecErr:
+        ui->console->append(line + "\n");
+        ui->console->append(tr("Generating Java files to control the Hoare triple(s)."));
+        starvoorsExec = StarvoorsExec::LarvaExec;
+        break;
+    case StarvoorsExec::LarvaExec:
+        if (line.contains("DATE Compiled Successfully")) {
+            starvoorsExec = StarvoorsExec::FinishedExec;
+            ui->console->append("Java files generation completed.");
+            ui->console->append("Initiating monitor files generation.");
+            return;
+        }
+        if (line.contains("compiler.ParseException")){
+            starvoorsExec = StarvoorsExec::LarvaExecErr;
+            ui->console->append("Java files generation completed.");
+            ui->console->append("Initiating monitor files generation.");
+            ui->console->append("Translating ppDATE to DATE.");
+            ui->console->append("Translation completed.");
+            ui->console->append("Running LARVA...");
+            ui->console->append(line);
+            return;
+        }
+        break;
+    case StarvoorsExec::LarvaExecErr:
+        if (line.contains("Welcome to StaRVOOrS")){
+           ui->console->append("Monitor files generation was not successful.");
+           return;
+        }
+        ui->console->append(line);
+        break;
+    case StarvoorsExec::FinishedExec:
+        if (line.contains("Welcome to StaRVOOrS")){
+            ui->console->append("Translating ppDATE to DATE.");
+            ui->console->append("Translation completed.");
+            ui->console->append("Running LARVA...");
+            ui->console->append("Monitor files generation completed.");
+            return;
+        }
+        break;
+    default:
+        ui->console->append(line + "\n");
+        break;
+    }
 }
+
 
 void StarvoorsGUI::on_pushButton_2_clicked()
 {
     process->kill();
     ui->pushButton_2->setEnabled(false);
     ui->button_run->setEnabled(true);
+    starvoorsExec = StarvoorsExec::NoneExec;
 }
 
-void StarvoorsGUI::disableComponents(int exit,QProcess::ExitStatus status)
+
+void StarvoorsGUI::resetComponents(int exit,QProcess::ExitStatus status)
 {
     if (exit == 0 && status == QProcess::NormalExit){
         ui->pushButton_2->setEnabled(false);
         ui->button_run->setEnabled(true);
+
+        switch (starvoorsExec) {
+        case StarvoorsExec::FinishedExec:
+            ui->console->append("StaRVOOrS has finished successfully.");
+            break;
+        case StarvoorsExec::OnlyParsing:
+            break;
+        default:
+            ui->console->append("StaRVOOrS has finished abruptly.");
+            break;
+        }
+
+        starvoorsExec = StarvoorsExec::NoneExec;
+    } else {
+        ui->pushButton_2->setEnabled(false);
+        ui->button_run->setEnabled(true);
+        starvoorsExec = StarvoorsExec::NoneExec;
+        ui->console->append("StaRVOOrS has finished abruptly.");
+    }
+}
+
+void StarvoorsGUI::on_only_parse_clicked()
+{
+    if (ui->only_parse->isChecked()) {
+        ui->only_rv->setEnabled(false);
+        ui->xml->setEnabled(false);
+        ui->none_verbose->setEnabled(false);
+
+    } else {
+        ui->only_rv->setEnabled(true);
+        ui->xml->setEnabled(true);
+        ui->none_verbose->setEnabled(true);
     }
 }
