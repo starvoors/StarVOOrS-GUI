@@ -43,6 +43,12 @@ private slots:
 
     void on_only_parse_clicked();
 
+    void on_source_returnPressed();
+
+    void on_ppdate_returnPressed();
+
+    void on_output_returnPressed();
+
 private:
     Ui::StarvoorsGUI *ui;
     QStringList makeStarvoorsCall(QStringList address);

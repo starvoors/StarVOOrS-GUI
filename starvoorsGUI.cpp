@@ -1,8 +1,15 @@
 #include "starvoorsGUI.h"
 #include "ui_starvoorsGUI.h"
-#include <QtGui>
-#include <iostream>
-#include <string>
+
+#include <QWidget>
+#include <QMenu>
+#include <QVBoxLayout>
+#include <QMenuBar>
+#include <QApplication>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QDesktopWidget>
+
 
 StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
     QWidget(parent),
@@ -14,7 +21,7 @@ StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
     ui->pushButton_2->setEnabled(false);
     starvoorsExec = StarvoorsExec::NoneExec;
 
-    //setting up a menu bar
+    //setting up the menu bar
     QVBoxLayout *boxLayout = new QVBoxLayout(this); // Main layout of widget
     QMenuBar* menuBar = new QMenuBar();
     QMenu *fileMenu = new QMenu("File");
@@ -103,7 +110,7 @@ QStringList StarvoorsGUI::makeStarvoorsCall(QStringList args){
     QStringList flags ;
 
     if (ui->only_parse->isChecked())
-        return args << tr("-p") << ui->ppdate->toPlainText();
+        return args << tr("-p") << ui->ppdate->text();
     if (ui->only_rv->isChecked())
         flags << tr("-r");
     if (ui->none_verbose->isChecked())
@@ -111,17 +118,17 @@ QStringList StarvoorsGUI::makeStarvoorsCall(QStringList args){
     if (ui->xml->isChecked())
         flags << tr("-x");
 
-    return args << ui->source->toPlainText()
+    return args << ui->source->text()
                 << flags
-                << ui->ppdate->toPlainText()
-                << ui->output->toPlainText();
+                << ui->ppdate->text()
+                << ui->output->text();
 }
 
 bool StarvoorsGUI::checkArguments(){
 
     switch (ui->only_parse->isChecked()) {
     case true:
-        if (ui->ppdate->toPlainText() == "") {
+        if (ui->ppdate->text() == "") {
             QMessageBox::warning(this, tr("Error"),
                                 exitMessage(10),
                                 QMessageBox::Ok,
@@ -187,11 +194,11 @@ QString StarvoorsGUI::exitMessage(int n){
 
 int StarvoorsGUI::argumentsEmpty(){
     int res = 0;
-    if (ui->source->toPlainText() == "")
+    if (ui->source->text() == "")
         res = res + 1;
-    if (ui->ppdate->toPlainText() == "")
+    if (ui->ppdate->text() == "")
         res = res + 10;
-    if (ui->output->toPlainText() == "")
+    if (ui->output->text() == "")
         res = res + 100;
     return res;
 }
@@ -204,6 +211,9 @@ void StarvoorsGUI::readFromConsole()
 
     if (line == "")
         return;
+
+    if (ui->only_parse->isChecked())
+        starvoorsExec = StarvoorsExec::OnlyParsing;
 
     switch (starvoorsExec) {
     case StarvoorsExec::NoneExec:
@@ -238,10 +248,6 @@ void StarvoorsGUI::readFromConsole()
             ui->console->append("Running LARVA...");
             ui->console->append(line);
             return;
-        }
-        if (line.contains("Welcome to StaRVOOrS")) {
-           ui->console->append(arr.remove(0,21));
-           starvoorsExec = StarvoorsExec::OnlyParsing;
         }
         break;
     case StarvoorsExec::KeyExec:
@@ -305,6 +311,11 @@ void StarvoorsGUI::readFromConsole()
             return;
         }
         break;
+    case StarvoorsExec::OnlyParsing:
+        if (line.contains("Welcome to StaRVOOrS")) {
+           ui->console->append(arr.remove(0,23));
+        }
+        break;
     default:
         ui->console->append(line + "\n");
         break;
@@ -359,4 +370,19 @@ void StarvoorsGUI::on_only_parse_clicked()
         ui->xml->setEnabled(true);
         ui->none_verbose->setEnabled(true);
     }
+}
+
+void StarvoorsGUI::on_source_returnPressed()
+{
+    ui->button_run->click();
+}
+
+void StarvoorsGUI::on_ppdate_returnPressed()
+{
+    ui->button_run->click();
+}
+
+void StarvoorsGUI::on_output_returnPressed()
+{
+    ui->button_run->click();
 }
