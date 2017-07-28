@@ -40,14 +40,13 @@ private slots:
     void on_toolButton_3_clicked();
     void on_button_run_clicked();
     void on_pushButton_2_clicked();
-
     void on_only_parse_clicked();
 
     void on_source_returnPressed();
-
     void on_ppdate_returnPressed();
-
     void on_output_returnPressed();
+
+    void showAbout();
 
 private:
     Ui::StarvoorsGUI *ui;

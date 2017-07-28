@@ -24,14 +24,21 @@ StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
     //setting up the menu bar
     QVBoxLayout *boxLayout = new QVBoxLayout(this); // Main layout of widget
     QMenuBar* menuBar = new QMenuBar();
-    QMenu *fileMenu = new QMenu("File");
+    QMenu *fileMenu = new QMenu("&File");
+    QMenu *helpMenu = new QMenu("&Help");
 
-    QAction* exitAction = new QAction(tr("Exit"), this);
+    QAction* exitAction = new QAction(tr("&Exit"), this);
     exitAction->setStatusTip(tr("Exit the application"));
     connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
 
+    QAction* aboutAction = new QAction(tr("&About"), this);
+    exitAction->setStatusTip(tr("Information about the GUI"));
+    connect(aboutAction, SIGNAL(triggered()), this, SLOT(showAbout()));
+
     fileMenu->addAction(exitAction);
+    helpMenu->addAction(aboutAction);
     menuBar->addMenu(fileMenu);
+    menuBar->addMenu(helpMenu);
 
     this->setLayout(boxLayout);
     boxLayout->setMenuBar(menuBar);
@@ -100,6 +107,7 @@ void StarvoorsGUI::on_button_run_clicked()
     process = new QProcess(this);
 
     connect(process,SIGNAL(readyReadStandardOutput()),this,SLOT(readFromConsole()));
+    connect(process,SIGNAL(readyReadStandardError()),this,SLOT(readFromConsole()));
     connect(process,SIGNAL(finished(int,QProcess::ExitStatus)),this,SLOT(resetComponents(int,QProcess::ExitStatus)));
 
     process->start(starvoors, makeStarvoorsCall(arguments));
@@ -129,10 +137,13 @@ bool StarvoorsGUI::checkArguments(){
     switch (ui->only_parse->isChecked()) {
     case true:
         if (ui->ppdate->text() == "") {
-            QMessageBox::warning(this, tr("Error"),
-                                exitMessage(10),
-                                QMessageBox::Ok,
-                                QMessageBox::Ok);
+            QMessageBox msgb (tr("Error"),
+                        exitMessage(10),
+                        QMessageBox::Warning,
+                        QMessageBox::Ok,
+                        QMessageBox::NoButton,
+                        QMessageBox::NoButton);
+            msgb.exec();
             ui->ppdate->setFocus();
             return false;
         }
@@ -147,10 +158,13 @@ bool StarvoorsGUI::checkArguments(){
             return true;
             break;
         default:
-            QMessageBox::warning(this, tr("Error"),
-                                exitMessage(res),
-                                QMessageBox::Ok,
-                                QMessageBox::Ok);
+            QMessageBox msgb (tr("Error"),
+                        exitMessage(res),
+                        QMessageBox::Warning,
+                        QMessageBox::Ok,
+                        QMessageBox::NoButton,
+                        QMessageBox::NoButton);
+            msgb.exec();
             return false;
             break;
         }
@@ -196,6 +210,7 @@ int StarvoorsGUI::argumentsEmpty(){
     int res = 0;
     if (ui->source->text() == "")
         res = res + 1;
+
     if (ui->ppdate->text() == "")
         res = res + 10;
     if (ui->output->text() == "")
@@ -206,7 +221,8 @@ int StarvoorsGUI::argumentsEmpty(){
 
 void StarvoorsGUI::readFromConsole()
 {
-    QByteArray arr = process->readAllStandardOutput();    
+    QByteArray arr = process->readAllStandardOutput();
+    QByteArray err = process->readAllStandardError();
     QByteArray line = arr.simplified();
 
     if (line == "")
@@ -234,7 +250,7 @@ void StarvoorsGUI::readFromConsole()
             ui->console->append("Initiating monitor files generation.");
             return;
         }
-        if (line.contains("compiler.ParseException")){
+        if (line.contains("Welcome to StaRVOOrS")){
             starvoorsExec = StarvoorsExec::LarvaExecErr;
             if (ui->only_rv->isChecked()) {
                 ui->console->append("StaRVOOrS is ran in only runtime verification mode.");
@@ -246,7 +262,7 @@ void StarvoorsGUI::readFromConsole()
             ui->console->append("Translating ppDATE to DATE.");
             ui->console->append("Translation completed.");
             ui->console->append("Running LARVA...");
-            ui->console->append(line);
+            ui->console->append("There was an error when running LARVA.");
             return;
         }
         break;
@@ -284,14 +300,14 @@ void StarvoorsGUI::readFromConsole()
             ui->console->append("Initiating monitor files generation.");
             return;
         }
-        if (line.contains("compiler.ParseException")){
+        if (line.contains("Welcome to StaRVOOrS")){
             starvoorsExec = StarvoorsExec::LarvaExecErr;
             ui->console->append("Java files generation completed.");
             ui->console->append("Initiating monitor files generation.");
             ui->console->append("Translating ppDATE to DATE.");
             ui->console->append("Translation completed.");
             ui->console->append("Running LARVA...");
-            ui->console->append(line);
+            ui->console->append("There was an error when running LARVA.");
             return;
         }
         break;
@@ -364,7 +380,6 @@ void StarvoorsGUI::on_only_parse_clicked()
         ui->only_rv->setEnabled(false);
         ui->xml->setEnabled(false);
         ui->none_verbose->setEnabled(false);
-
     } else {
         ui->only_rv->setEnabled(true);
         ui->xml->setEnabled(true);
@@ -385,4 +400,21 @@ void StarvoorsGUI::on_ppdate_returnPressed()
 void StarvoorsGUI::on_output_returnPressed()
 {
     ui->button_run->click();
+}
+
+void StarvoorsGUI::showAbout()
+{
+    QPixmap myPixmap(15,15);
+    myPixmap.load(QDir::currentPath() + tr("/starvoors_logo.png"));
+
+    QString info = tr("For more information about StaRVOOrS, visit our website :\n\n") + tr("http://cse-212294.cse.chalmers.se/starvoors/");
+
+    QMessageBox msgb (tr("About StaRVOOrS"),
+                info,
+                QMessageBox::Information,
+                QMessageBox::NoButton,
+                QMessageBox::NoButton,
+                QMessageBox::Close);
+    msgb.setIconPixmap(myPixmap.scaled(250,180, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    msgb.exec();
 }
