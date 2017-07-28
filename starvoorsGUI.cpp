@@ -39,6 +39,7 @@ StarvoorsGUI::StarvoorsGUI(QWidget *parent) :
     helpMenu->addAction(aboutAction);
     menuBar->addMenu(fileMenu);
     menuBar->addMenu(helpMenu);
+    menuBar->setNativeMenuBar(false);
 
     this->setLayout(boxLayout);
     boxLayout->setMenuBar(menuBar);
