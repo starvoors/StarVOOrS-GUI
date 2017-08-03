@@ -25,13 +25,14 @@ public:
         KeyExecErr = 2,
         LarvaExec = 3,
         LarvaExecErr = 4,
+        LarvaWarning = 7,
         FinishedExec = 5,
         OnlyParsing = 6
       };
 
 private slots:
-    QString browseDir(QString s);
-    QString browseFile(QString s);
+    QString browseDir(QString s,QString dir);
+    QString browseFile(QString s,QString dir);
     void readFromConsole();
     void resetComponents(int exit,QProcess::ExitStatus status);
 
@@ -55,6 +56,7 @@ private:
     QString exitMessage(int n);
     int argumentsEmpty();
     StarvoorsExec starvoorsExec;
+    QByteArray warn ;
 };
 
 #endif // STARVOORSGUI_H

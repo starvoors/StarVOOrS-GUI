@@ -59,36 +59,54 @@ StarvoorsGUI::~StarvoorsGUI()
 void StarvoorsGUI::on_toolButton_clicked()
 {
     QString path;
-    path = browseDir(tr("Choose directory"));
+    if (!(ui->source->text() == "")){
+       if (QDir(ui->source->text()).exists()){
+          path = browseDir(tr("Choose directory"),ui->source->text());
+       }
+    } else {
+        path = browseDir(tr("Choose directory"),QString::null);
+    }
     ui->source->setText( path );
 }
 
 void StarvoorsGUI::on_toolButton_2_clicked()
 {
     QString path;
-    path = browseFile(tr("Choose file"));
+    if (!(ui->ppdate->text() == "")){
+       if (QFile(ui->ppdate->text()).exists()){
+          path = browseFile(tr("Choose file"),ui->ppdate->text());
+       }
+    } else {
+        path = browseFile(tr("Choose file"),QString::null);
+    }
     ui->ppdate->setText( path );
 }
 
 void StarvoorsGUI::on_toolButton_3_clicked()
 {
     QString path;
-    path = browseDir(tr("Choose directory"));
+    if (!(ui->output->text() == "")){
+       if (QDir(ui->output->text()).exists()){
+          path = browseDir(tr("Choose directory"),ui->output->text());
+       }
+    } else {
+        path = browseDir(tr("Choose directory"),QString::null);
+    }
     ui->output->setText( path );
 }
 
-QString StarvoorsGUI::browseDir(QString s)
+QString StarvoorsGUI::browseDir(QString s,QString dir)
 {
     return QFileDialog::getExistingDirectory(this, s,
-                        QString::null,
+                        dir,
                         QFileDialog::ShowDirsOnly
                         | QFileDialog::DontResolveSymlinks);
 }
 
 
-QString StarvoorsGUI::browseFile(QString s)
+QString StarvoorsGUI::browseFile(QString s,QString dir)
 {
-    return QFileDialog::getOpenFileName(this, s, QString::null, QString::null);
+    return QFileDialog::getOpenFileName(this, s, dir, QString::null);
 }
 
 
@@ -223,8 +241,7 @@ int StarvoorsGUI::argumentsEmpty(){
 void StarvoorsGUI::readFromConsole()
 {
     QByteArray arr = process->readAllStandardOutput();
-    QByteArray err = process->readAllStandardError();
-    QByteArray line = arr.simplified();
+    QByteArray line = arr.simplified();    
 
     if (line == "")
         return;
@@ -238,6 +255,18 @@ void StarvoorsGUI::readFromConsole()
             ui->console->append(tr("Initiating static verification of Hoare triples with KeY."));
             ui->console->append(line);
             starvoorsExec = StarvoorsExec::KeyExec;
+            return;
+        }
+        if (line.contains("Warning:")){
+            if (ui->only_rv->isChecked()) {
+                ui->console->append("StaRVOOrS is ran in only runtime verification mode.");
+            }
+            else {
+                ui->console->append("There are no Hoare triples to analyse.");
+            }
+            starvoorsExec = StarvoorsExec::LarvaWarning;
+            warn = line;
+            ui->console->append("Initiating monitor files generation.");
             return;
         }
         if (line.contains("DATE Compiled Successfully")) {
@@ -295,6 +324,13 @@ void StarvoorsGUI::readFromConsole()
         starvoorsExec = StarvoorsExec::LarvaExec;
         break;
     case StarvoorsExec::LarvaExec:
+        if (line.contains("Warning:")){
+            starvoorsExec = StarvoorsExec::LarvaWarning;
+            warn = line;
+            ui->console->append("Java files generation completed.");
+            ui->console->append("Initiating monitor files generation.");
+            return;
+        }
         if (line.contains("DATE Compiled Successfully")) {
             starvoorsExec = StarvoorsExec::FinishedExec;
             ui->console->append("Java files generation completed.");
@@ -319,11 +355,27 @@ void StarvoorsGUI::readFromConsole()
         }
         ui->console->append(line);
         break;
-    case StarvoorsExec::FinishedExec:
+    case StarvoorsExec::LarvaWarning:
+        if (line.contains("DATE Compiled Successfully")){
+            ui->console->append("Translating ppDATE to DATE.");
+            ui->console->append("Translation completed.");
+            ui->console->append("Running LARVA...");
+            ui->console->append("\n" + warn + "\n");
+            ui->console->append("DATE Compiled Successfully by LARVA.");
+            ui->console->append("Monitor files generation completed.");
+            return;
+        }
+        if (line.contains("Welcome to StaRVOOrS")){
+            starvoorsExec = StarvoorsExec::FinishedExec;
+            return;
+        }
+        break;
+    case StarvoorsExec::FinishedExec:        
         if (line.contains("Welcome to StaRVOOrS")){
             ui->console->append("Translating ppDATE to DATE.");
             ui->console->append("Translation completed.");
             ui->console->append("Running LARVA...");
+            ui->console->append("DATE Compiled Successfully by LARVA.");
             ui->console->append("Monitor files generation completed.");
             return;
         }
