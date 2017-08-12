@@ -280,7 +280,11 @@ void StarvoorsGUI::readFromConsole()
             ui->console->append("Initiating monitor files generation.");
             return;
         }
-        if (line.contains("Welcome to StaRVOOrS")){
+        if (line.contains("Welcome to StaRVOOrS")){            
+            if (arr.remove(0,23).contains("Error:")) {
+               ui->console->append(arr);
+               return;
+            }
             starvoorsExec = StarvoorsExec::LarvaExecErr;
             if (ui->only_rv->isChecked()) {
                 ui->console->append("StaRVOOrS is ran in only runtime verification mode.");
