@@ -144,6 +144,10 @@ QStringList StarvoorsGUI::makeStarvoorsCall(QStringList args){
         flags << tr("-n");
     if (ui->xml->isChecked())
         flags << tr("-x");
+    if (ui->killbad->isChecked())
+        flags << tr("-k");
+    if (ui->distributed->isChecked())
+        flags << tr("-d");
 
     return args << ui->source->text()
                 << flags

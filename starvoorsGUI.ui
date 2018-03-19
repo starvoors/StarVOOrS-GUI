@@ -242,6 +242,42 @@
       <string>Do not remove KeY xml file</string>
      </property>
     </widget>
+    <widget class="QCheckBox" name="killbad">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>200</y>
+       <width>391</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Kill all the ppDATEs which reach bad states</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="distributed">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>240</y>
+       <width>381</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Improve monitor output for active objects</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QWidget" name="tab_console">
     <attribute name="title">
